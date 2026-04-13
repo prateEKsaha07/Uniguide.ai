@@ -5,6 +5,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from src.ingestion.extract import extract_text_from_pdf
 from src.ingestion.clean import clean_text
 from src.retrival.retriever import retrieve
+from src.llm.llama3 import ask_llm
 
 pdf_path = "data/raw/syllabus.pdf"
 
@@ -16,8 +17,24 @@ pdf_path = "data/raw/syllabus.pdf"
 
 # print("Text processing complete.")
 
-query = "What is DBMS?"
-results = retrieve(query)
+while True:
+    query = input("Ask something: ")
 
-for i,res in enumerate(results):
-    print(f"Result {i+1}:\n{res[:200]}...")
+    if query.lower() in ["exit", "quit"]:
+        print("Exiting...")
+        break
+
+    results = retrieve(query,top_k=1)
+    context = "\n\n".join(results)
+
+    print("Context retrieved: ")
+    print(context[:200])
+
+    answer = ask_llm(context, query)
+    print("Answer: ")
+    print(answer)
+
+
+
+
+
