@@ -1,27 +1,32 @@
-from sentence_transformers import SentenceTransformer
 import json
-import faiss
 import numpy as np
 
-load_model = SentenceTransformer('all-MiniLM-L6-v2') # Load the model once
+model = None
 
 def create_embeddings():
-    # loading the chnks from the json file
+    global model
+
+    if model is None:
+        print("Loading embedding model...")
+        from sentence_transformers import SentenceTransformer
+        model = SentenceTransformer('all-MiniLM-L6-v2')
+
+    import faiss
+
     with open("data/processed/chunks.json", "r", encoding="utf-8") as f:
         chunks = json.load(f)
 
-    # creating the embeddings for the chunks
-    embeddings = load_model.encode(chunks)
+    print("Creating embeddings...")
+    embeddings = model.encode(chunks, batch_size=8)
 
-    embaddings = np.array(embeddings).astype('float32')
+    embeddings = np.array(embeddings).astype('float32')
 
-    # faiss index
+    # FAISS index
     dimension = embeddings.shape[1]
     index = faiss.IndexFlatL2(dimension)
-
     index.add(embeddings)
 
-    # saving the index
+    # Save index
     faiss.write_index(index, "data/processed/faiss_index.bin")
 
     with open("data/processed/chunks_store.json", "w", encoding="utf-8") as f:
@@ -32,7 +37,3 @@ def create_embeddings():
 
 if __name__ == "__main__":
     create_embeddings()
-
-
-
-     

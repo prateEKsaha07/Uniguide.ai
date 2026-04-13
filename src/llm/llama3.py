@@ -7,18 +7,26 @@ def ask_llm(context, query):
 
     prompt = f"""
 You are a strict academic assistant.
-
-You MUST follow these rules:
+Follow these rules strictly:
 
 1. Answer ONLY using the provided context.
-2. Do NOT use any outside knowledge.
-3. If the answer is not clearly in the context, reply exactly:
+2. Do NOT use outside knowledge.
+3. If answer is not in context, reply exactly:
    "Not in syllabus"
 
-4. If the answer IS present:
-   - Start with a clear definition
-   - Then give bullet points
-   - Keep it simple and accurate
+4. Understand the question type:
+
+- If user asks to explain → give full explanation.
+- If user asks to list topics → list them.
+- If user asks for count → count them.
+
+5. DEFAULT BEHAVIOR:
+If the user does NOT explicitly ask for explanation,
+then:
+- give SHORT definitions (1 line each)
+- keep answers concise
+
+6. Always keep answers structured.
 
 Context:
 {context}
@@ -60,3 +68,6 @@ Answer:
                 continue
 
         return full_text.strip() if full_text else "error in getting response from LLM"
+    
+
+    
