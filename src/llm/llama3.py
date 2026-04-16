@@ -1,32 +1,57 @@
 import json
 import requests
 
+
+def detect_intent(query):
+    q = query.lower()
+
+    if "how many" in q or "count" in q:
+        return "count"
+    if "list" in q or "topics" in q:
+        return "list"
+    if "learning path" in q or "roadmap" in q:
+        return "path"
+
+    return "default"
+
+
 def ask_llm(context, query):
     if not context.strip():
         return "Not in syllabus"
 
+    intent = detect_intent(query)
+
     prompt = f"""
-You are a strict academic assistant.
-Follow these rules strictly:
+You are a STRICT syllabus assistant.
 
-1. Answer ONLY using the provided context.
-2. Do NOT use outside knowledge.
-3. If answer is not in context, reply exactly:
-   "Not in syllabus"
+You MUST follow rules EXACTLY.
 
-4. Understand the question type:
+RULES:
+1. Use ONLY the given context
+2. If answer not present → reply EXACTLY: Not in syllabus
 
-- If user asks to explain → give full explanation.
-- If user asks to list topics → list them.
-- If user asks for count → count them.
+3. OUTPUT FORMAT RULES (MANDATORY):
 
-5. DEFAULT BEHAVIOR:
-If the user does NOT explicitly ask for explanation,
-then:
-- give SHORT definitions (1 line each)
-- keep answers concise
+IF intent = count:
+- Output ONLY a number
+- No explanation
 
-6. Always keep answers structured.
+IF intent = list:
+- Output ONLY topic names
+- One per line
+- No explanation
+
+IF intent = path:
+- Output ordered steps
+- Use numbering (1,2,3...)
+
+IF intent = default:
+- Give SHORT definition (1–2 lines max)
+
+DO NOT:
+- Add extra explanation
+- Add examples
+- Add introduction or conclusion
 
 Context:
 {context}
@@ -34,8 +59,12 @@ Context:
 Question:
 {query}
 
+Intent:
+{intent}
+
 Answer:
 """
+
     try:
         response = requests.post(
             "http://localhost:11434/api/generate",
@@ -44,30 +73,33 @@ Answer:
                 "prompt": prompt,
                 "stream": False,
                 "options": {
-                    "temperature": 0.2,
-                    "num_predict": 200
+                    "temperature": 0.1,
+                    "num_predict": 150
                 }
             },
             timeout=60,
         )
         response.raise_for_status()
+
     except requests.RequestException as exc:
         return f"error contacting LLM: {exc}"
 
     try:
         data = response.json()
-        return data.get("response", "error: missing response field").strip()
+        result = data.get("response", "").strip()
+
     except ValueError:
-        full_text = ""
+        result = ""
         for line in response.text.splitlines():
             try:
                 payload = json.loads(line)
                 if "response" in payload:
-                    full_text += payload["response"]
+                    result += payload["response"]
             except ValueError:
                 continue
+        result = result.strip()
 
-        return full_text.strip() if full_text else "error in getting response from LLM"
-    
+    if not result:
+        return "error in getting response from LLM"
 
-    
+    return result
